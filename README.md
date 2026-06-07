@@ -9,6 +9,10 @@ The device protocol is reimplemented natively in Swift (no Python dependency):
 mDNS discovery, the Diffie-Hellman pairing handshake, RSA-SHA256 session auth,
 and the full document/Wi-Fi/system/template REST API.
 
+<p align="center">
+  <img src="docs/screenshot.png" alt="Digital Paper for macOS — document browser" width="700">
+</p>
+
 ## Features
 
 - **Guided pairing** — discover devices on the network, pair with the on-device
