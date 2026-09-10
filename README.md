@@ -50,7 +50,7 @@ downloaded app fails to launch because of an embedded framework signature
 problem, repair it with:
 
 ```bash
-scripts/release.sh /path/to/DigitalPaper.app
+scripts/repair-app.sh /path/to/DigitalPaper.app
 ```
 
 See [`docs/APP_REPAIR.md`](docs/APP_REPAIR.md) for details.
@@ -70,7 +70,7 @@ See [`docs/APP_REPAIR.md`](docs/APP_REPAIR.md) for details.
 该上游版本要求 macOS 14 或更高版本，且尚未完成公证。如果下载的 App 因内嵌 Framework 签名问题无法启动，可以运行：
 
 ```bash
-scripts/release.sh /path/to/DigitalPaper.app
+scripts/repair-app.sh /path/to/DigitalPaper.app
 ```
 
 详细说明请参阅 [`docs/APP_REPAIR.md`](docs/APP_REPAIR.md)。
@@ -99,17 +99,23 @@ Reference crypto vectors are regenerated with `python3 tools/gen_vectors.py`
 
 ## Repair an Existing App
 
-`scripts/release.sh` repairs and packages an existing `DigitalPaper.app`
+`scripts/repair-app.sh` repairs and packages an existing `DigitalPaper.app`
 without compiling the project or requiring Xcode. It signs embedded frameworks
 first, signs the outer app second, verifies the bundle, creates a repaired ZIP,
 and opens the app by default.
 
 ```bash
-scripts/release.sh /path/to/DigitalPaper.app
+scripts/repair-app.sh /path/to/DigitalPaper.app
 ```
 
 See [`docs/APP_REPAIR.md`](docs/APP_REPAIR.md) for Chinese and English
 documentation, signing modes, options, and distribution notes.
+
+## Release (Developer ID, notarized)
+
+Use `scripts/release.sh` for the original source build, Developer ID signing,
+notarization, and stapling workflow. It requires Xcode, XcodeGen, and the
+appropriate Apple signing and notarization credentials.
 
 ## Credit
 

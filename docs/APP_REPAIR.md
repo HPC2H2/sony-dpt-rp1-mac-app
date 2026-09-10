@@ -4,7 +4,7 @@
 
 ### 用途
 
-`scripts/release.sh` 用于修复一个已经存在的 `DigitalPaper.app`，不负责编译源码，也不依赖 Xcode、XcodeGen 或 `xcodebuild`。
+`scripts/repair-app.sh` 用于修复一个已经存在的 `DigitalPaper.app`，不负责编译源码，也不依赖 Xcode、XcodeGen 或 `xcodebuild`。
 
 它解决的主要问题是：应用外层签名与内嵌的 `DigitalPaperKit.framework` 签名不一致，导致 macOS 在启动阶段由 dyld 拒绝加载应用。
 
@@ -20,13 +20,13 @@
 
 ```bash
 cd /path/to/sony-dpt-rp1-mac-app
-scripts/release.sh /path/to/DigitalPaper.app
+scripts/repair-app.sh /path/to/DigitalPaper.app
 ```
 
 例如：
 
 ```bash
-scripts/release.sh \
+scripts/repair-app.sh \
   /Users/hpc2h2/Downloads/DigitalPaper-original/DigitalPaper.app
 ```
 
@@ -41,14 +41,14 @@ dist/DigitalPaper-repaired.zip
 默认使用 macOS Ad-hoc 签名，适合本机修复和测试：
 
 ```bash
-scripts/release.sh /path/to/DigitalPaper.app
+scripts/repair-app.sh /path/to/DigitalPaper.app
 ```
 
 如果本机有 Developer ID Application 证书，可以指定签名身份：
 
 ```bash
 SIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)" \
-  scripts/release.sh /path/to/DigitalPaper.app
+  scripts/repair-app.sh /path/to/DigitalPaper.app
 ```
 
 可选环境变量：
@@ -72,7 +72,7 @@ SIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)" \
 
 ### Purpose
 
-`scripts/release.sh` repairs an existing `DigitalPaper.app`. It does not compile the source project and does not require Xcode, XcodeGen, or `xcodebuild`.
+`scripts/repair-app.sh` repairs an existing `DigitalPaper.app`. It does not compile the source project and does not require Xcode, XcodeGen, or `xcodebuild`.
 
 It fixes the common launch failure where the outer application and the embedded `DigitalPaperKit.framework` have incompatible code signatures, causing macOS dyld to reject the app before launch.
 
@@ -88,13 +88,13 @@ The script:
 
 ```bash
 cd /path/to/sony-dpt-rp1-mac-app
-scripts/release.sh /path/to/DigitalPaper.app
+scripts/repair-app.sh /path/to/DigitalPaper.app
 ```
 
 Example:
 
 ```bash
-scripts/release.sh \
+scripts/repair-app.sh \
   /Users/hpc2h2/Downloads/DigitalPaper-original/DigitalPaper.app
 ```
 
@@ -109,14 +109,14 @@ dist/DigitalPaper-repaired.zip
 The default is ad-hoc signing for local repair and testing:
 
 ```bash
-scripts/release.sh /path/to/DigitalPaper.app
+scripts/repair-app.sh /path/to/DigitalPaper.app
 ```
 
 To use a Developer ID Application certificate:
 
 ```bash
 SIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)" \
-  scripts/release.sh /path/to/DigitalPaper.app
+  scripts/repair-app.sh /path/to/DigitalPaper.app
 ```
 
 Optional environment variables:
