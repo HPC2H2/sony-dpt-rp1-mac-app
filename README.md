@@ -35,6 +35,46 @@ and the full document/Wi-Fi/system/template REST API.
 
 Credentials are stored in the Keychain, keyed by device serial.
 
+## Download the Prebuilt App
+
+A prebuilt macOS Universal app is available from the upstream v0.1.0 release:
+
+[Download DigitalPaper-macOS.zip](https://github.com/plateaukao/sony-dpt-rp1-mac-app/releases/download/v0.1.0/DigitalPaper-macOS.zip)
+
+1. Download and unzip `DigitalPaper-macOS.zip`.
+2. Move `DigitalPaper.app` to `/Applications`.
+3. On the first launch, right-click the app and choose **Open** if macOS shows a Gatekeeper warning.
+
+The upstream release requires macOS 14 or later and is not notarized. If the
+downloaded app fails to launch because of an embedded framework signature
+problem, repair it with:
+
+```bash
+scripts/release.sh /path/to/DigitalPaper.app
+```
+
+See [`docs/APP_REPAIR.md`](docs/APP_REPAIR.md) for details.
+
+## 下载预编译 App
+
+可以直接下载上游 v0.1.0 的 macOS Universal 预编译版本：
+
+[下载 DigitalPaper-macOS.zip](https://github.com/plateaukao/sony-dpt-rp1-mac-app/releases/download/v0.1.0/DigitalPaper-macOS.zip)
+
+安装步骤：
+
+1. 下载并解压 `DigitalPaper-macOS.zip`；
+2. 将 `DigitalPaper.app` 拖入 `/Applications`；
+3. 第一次启动时，如果 macOS 显示 Gatekeeper 安全提示，请右键点击 App 并选择“打开”。
+
+该上游版本要求 macOS 14 或更高版本，且尚未完成公证。如果下载的 App 因内嵌 Framework 签名问题无法启动，可以运行：
+
+```bash
+scripts/release.sh /path/to/DigitalPaper.app
+```
+
+详细说明请参阅 [`docs/APP_REPAIR.md`](docs/APP_REPAIR.md)。
+
 ## Build & Run
 
 Requires Xcode 16+ and [XcodeGen](https://github.com/yonyz/XcodeGen)
