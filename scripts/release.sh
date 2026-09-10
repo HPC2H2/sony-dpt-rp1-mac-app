@@ -1,57 +1,127 @@
 #!/usr/bin/env bash
 #
-# Build, sign, notarize, and staple a Developer ID release of Digital Paper.
+# Repair and optionally package an existing DigitalPaper.app.
 #
-# Prerequisites:
-#   - A "Developer ID Application" certificate in your login keychain.
-#   - A notarytool keychain profile created once with:
-#       xcrun notarytool store-credentials dp-notary \
-#         --apple-id "you@example.com" --team-id TEAMID --password APP_SPECIFIC_PW
+# This script intentionally does not build the project. It repairs the common
+# release failure where the embedded DigitalPaperKit.framework and the outer
+# application have incompatible signatures, causing dyld to reject the app at
+# launch.
 #
 # Usage:
-#   DEVELOPMENT_TEAM=TEAMID SIGN_IDENTITY="Developer ID Application: Name (TEAMID)" \
-#     scripts/release.sh
+#   scripts/release.sh /path/to/DigitalPaper.app
+#
+# Optional environment variables:
+#   SIGN_IDENTITY             Signing identity; defaults to ad-hoc (-).
+#   OPEN_AFTER_SIGNING        Set to 0 to skip opening the repaired app.
+#   DIST                      Output directory for the repaired ZIP.
+#   ZIP_NAME                  Output ZIP filename.
+#   APP_ENTITLEMENTS          Entitlements file for the outer app.
 #
 set -euo pipefail
-cd "$(dirname "$0")/.."
 
-: "${SIGN_IDENTITY:?Set SIGN_IDENTITY to your Developer ID Application identity}"
-NOTARY_PROFILE="${NOTARY_PROFILE:-dp-notary}"
-CONFIG=Release
-DD=build/release
-APP="$DD/Build/Products/$CONFIG/DigitalPaper.app"
-DIST=dist
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-echo "==> Generating project"
-xcodegen generate
+usage() {
+  sed -n '2,22p' "$0"
+  exit 2
+}
 
-echo "==> Building ($CONFIG)"
-xcodebuild -project DigitalPaper.xcodeproj -scheme DigitalPaper \
-  -configuration "$CONFIG" -derivedDataPath "$DD" \
-  ${DEVELOPMENT_TEAM:+DEVELOPMENT_TEAM=$DEVELOPMENT_TEAM} \
-  CODE_SIGN_IDENTITY="$SIGN_IDENTITY" \
-  build
+APP_INPUT="${1:-${APP_PATH:-}}"
+[[ -n "$APP_INPUT" ]] || usage
 
-echo "==> Signing (hardened runtime)"
-codesign --force --options runtime --timestamp \
-  --entitlements DigitalPaper/DigitalPaper.entitlements \
-  --sign "$SIGN_IDENTITY" "$APP"
+if [[ ! -d "$APP_INPUT" || ! "$(basename "$APP_INPUT")" == *.app ]]; then
+  echo "Error: expected an existing .app bundle: $APP_INPUT" >&2
+  exit 1
+fi
 
-echo "==> Packaging"
-mkdir -p "$DIST"
-ZIP="$DIST/DigitalPaper.zip"
-ditto -c -k --keepParent "$APP" "$ZIP"
+APP_DIR="$(cd "$(dirname "$APP_INPUT")" && pwd)"
+APP="$APP_DIR/$(basename "$APP_INPUT")"
+SIGN_IDENTITY="${SIGN_IDENTITY:--}"
+OPEN_AFTER_SIGNING="${OPEN_AFTER_SIGNING:-1}"
+DIST="${DIST:-$APP_DIR/dist}"
+ZIP_NAME="${ZIP_NAME:-$(basename "$APP" .app)-repaired.zip}"
+ZIP="$DIST/$ZIP_NAME"
+APP_ENTITLEMENTS="${APP_ENTITLEMENTS:-$ROOT_DIR/DigitalPaper/DigitalPaper.entitlements}"
 
-echo "==> Notarizing"
-xcrun notarytool submit "$ZIP" --keychain-profile "$NOTARY_PROFILE" --wait
+for tool in codesign ditto; do
+  if ! command -v "$tool" >/dev/null 2>&1; then
+    echo "Error: required macOS tool not found: $tool" >&2
+    exit 1
+  fi
+done
 
-echo "==> Stapling"
-xcrun stapler staple "$APP"
-ditto -c -k --keepParent "$APP" "$ZIP"
+if [[ "$SIGN_IDENTITY" == "-" ]]; then
+  echo "==> Using ad-hoc signing for local repair"
+  SIGN_ARGS=(--force --sign -)
+else
+  echo "==> Using signing identity: $SIGN_IDENTITY"
+  SIGN_ARGS=(--force --options runtime --timestamp --sign "$SIGN_IDENTITY")
+fi
 
-echo "==> Verifying"
-codesign --verify --deep --strict --verbose=2 "$APP"
-spctl -a -vvv "$APP" || true
-stapler validate "$APP"
+sign_embedded_code() {
+  local item
+
+  # Sign standalone dynamic libraries before framework bundles.
+  if [[ -d "$APP/Contents/Frameworks" ]]; then
+    while IFS= read -r -d '' item; do
+      echo "==> Signing embedded library: $item"
+      codesign "${SIGN_ARGS[@]}" "$item"
+    done < <(find "$APP/Contents/Frameworks" -type f -name '*.dylib' -print0)
+
+    # The framework must be signed before the outer application.
+    while IFS= read -r -d '' item; do
+      echo "==> Signing embedded framework: $item"
+      codesign "${SIGN_ARGS[@]}" "$item"
+    done < <(find "$APP/Contents/Frameworks" -type d -name '*.framework' -print0)
+  fi
+}
+
+sign_outer_app() {
+  local app_sign_args=("${SIGN_ARGS[@]}")
+
+  if [[ -f "$APP_ENTITLEMENTS" ]]; then
+    app_sign_args+=(--entitlements "$APP_ENTITLEMENTS")
+  fi
+
+  echo "==> Signing application: $APP"
+  codesign "${app_sign_args[@]}" "$APP"
+}
+
+verify_bundle() {
+  echo "==> Verifying nested code"
+  if [[ -d "$APP/Contents/Frameworks" ]]; then
+    while IFS= read -r -d '' item; do
+      codesign --verify --strict --verbose=2 "$item"
+    done < <(find "$APP/Contents/Frameworks" -type d -name '*.framework' -print0)
+  fi
+
+  echo "==> Verifying application"
+  codesign --verify --deep --strict --verbose=2 "$APP"
+
+  # Ad-hoc signatures are suitable for local repair but are not accepted by
+  # Gatekeeper as a distributable Developer ID release. Only assess Gatekeeper
+  # when a real signing identity was supplied.
+  if [[ "$SIGN_IDENTITY" != "-" ]] && command -v spctl >/dev/null 2>&1; then
+    spctl --assess --type execute --verbose=4 "$APP"
+  fi
+}
+
+package_app() {
+  mkdir -p "$DIST"
+  rm -f "$ZIP"
+  echo "==> Creating repaired archive: $ZIP"
+  ditto --norsrc -c -k --keepParent "$APP" "$ZIP"
+}
+
+sign_embedded_code
+sign_outer_app
+verify_bundle
+package_app
+
+if [[ "$OPEN_AFTER_SIGNING" == "1" ]]; then
+  echo "==> Opening repaired app"
+  open -n "$APP"
+  echo "==> Repaired app opened successfully: $APP"
+fi
 
 echo "==> Done: $ZIP"

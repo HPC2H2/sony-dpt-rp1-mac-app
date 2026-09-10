@@ -57,9 +57,19 @@ xcodebuild -project DigitalPaper.xcodeproj -scheme DigitalPaper \
 Reference crypto vectors are regenerated with `python3 tools/gen_vectors.py`
 (requires the `cryptography` package).
 
-## Release (Developer ID, notarized)
+## Repair an Existing App
 
-See `scripts/release.sh` for the signed + notarized + stapled build.
+`scripts/release.sh` repairs and packages an existing `DigitalPaper.app`
+without compiling the project or requiring Xcode. It signs embedded frameworks
+first, signs the outer app second, verifies the bundle, creates a repaired ZIP,
+and opens the app by default.
+
+```bash
+scripts/release.sh /path/to/DigitalPaper.app
+```
+
+See [`docs/APP_REPAIR.md`](docs/APP_REPAIR.md) for Chinese and English
+documentation, signing modes, options, and distribution notes.
 
 ## Credit
 
